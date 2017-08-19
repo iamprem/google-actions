@@ -1,5 +1,6 @@
 'use strict';
 
+const config = require('./config');
 const express = require('express');
 const https = require('https');
 const fs = require('fs');
@@ -9,21 +10,22 @@ const util = require('util');
 const exec = require('child_process').exec;
 const execSync = require('child_process').execSync;
 const log = require('./logging');
+const ytdl = require('./ytdl');
 
-const MUSIC_ROOT = '/home/bukky/Music/plexmusic';
+const MUSIC_ROOT = config.music.root;
 const FUZZY_FIND_CMD = "find %s -iname '*.mp3' | /home/bukky/.fzf/bin/fzf -f '%s'";
 const PLAY_MUSIC_CMD = "ffplay -autoexit %s";
 
-var options = {
+const options = {
     key: fs.readFileSync('/home/bukky/workspace/google-actions/config/iamprem.key'),
     cert: fs.readFileSync('/home/bukky/workspace/google-actions/config/iamprem_tech.crt'),
     ca: fs.readFileSync('/home/bukky/workspace/google-actions/config/iamprem_tech.ca-bundle'),
 };
 const app = express();
-app.set('port', 8080);
 app.use(bodyParser.json());
 app.use(log.requestLogger);
-// app.use(log.errorLogger);
+app.use(log.errorLogger);
+app.use('/ytdl', ytdl);
 
 // Search the music directory synchronously and return the first match
 function search(query) {
@@ -35,8 +37,7 @@ function search(query) {
 app.post('/action', function (req, res) {
     log.info('Request headers: ' + JSON.stringify(req.headers));
     log.info('Request body: ' + JSON.stringify(req.body));
-    log.error('Sample error log');
-    let song_path = "";
+    var song_path = "";
     if (req.body.result.action === 'jarvis.play') {
         let query = req.body.result.parameters.song || "vellai";
         log.info("Searching for song: " + query);
@@ -54,7 +55,7 @@ app.post('/action', function (req, res) {
     }
 
 
-    let response = {
+    const response = {
         "speech": "Playing the song " + song_path,
         "displayText": "what a beauty"
     };
@@ -67,10 +68,6 @@ app.get('/', function (req, res) {
     res.send("Success")
 });
 
-var server = https.createServer(options, app).listen(8443, function(){
+var server = https.createServer(options, app).listen(config.web.port, function(){
     log.info("server started at port 8443");
-});
-
-app.listen(app.get('port'), function () {
-    log.info('Server started at port 8080!');
 });
