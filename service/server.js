@@ -68,6 +68,11 @@ app.get('/', function (req, res) {
     res.send("Success")
 });
 
+app.get('/goauth', function (req, res) {
+    const code = req.query.code;
+    config.gapi.code = code;
+});
+
 var server = https.createServer(options, app).listen(config.web.port, function(){
     log.info("server started at port 8443");
 });
