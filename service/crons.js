@@ -5,14 +5,21 @@ const exec      = require('child_process').exec;
 const log       = require('./logging');
 const config    = require('./config');
 
-var getHourlyLikedVideos = schedule.scheduleJob('0 0 * * * *', function(){
-    var pastHour = new Date();
-    pastHour.setHours(pastHour.getHours() - 1);
+var getLikedVideosEvery10Min = schedule.scheduleJob('0 */10 * * * *', function(){
+    var pastTenMin = new Date();
+    pastTenMin.setMinutes(pastTenMin.getMinutes() - 10);
+    getLikeActivities(pastTenMin, null);
+});
+
+
+function getLikeActivities(publishedAfter, pageToken) {
+
     youtube.activities.list({
         part: 'snippet,contentDetails',
         maxResults: 50,
         mine: true,
-        publishedAfter: pastHour.toISOString()
+        publishedAfter: publishedAfter.toISOString(),
+        pageToken: pageToken
     }, function (err, data, response) {
         if (err) {
             log.error('Error getting activities from youtube: ' + err);
@@ -38,7 +45,11 @@ var getHourlyLikedVideos = schedule.scheduleJob('0 0 * * * *', function(){
                     log.info("Skipping item in activity list that are not 'Likes'");
                 }
             }
+            if (data.nextPageToken !== undefined && data.nextPageToken !== null) {
+                log.info("Fetching the next activities result page" + data.nextPageToken);
+                getLikeActivities(publishedAfter, data.nextPageToken);
+            }
         }
 
     });
-});
+}
